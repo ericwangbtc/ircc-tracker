@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ircc-tracker-local"
+version = "0.1.0"
+description = "Local-only CLI for querying your own IRCC Application Status Tracker data"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+dependencies = [
+  "requests>=2.33,<3",
+  "urllib3>=2.7,<3",
+]
+
+[project.scripts]
+ircc-tracker = "ircc_tracker.cli:main"
+
+[project.urls]
+Repository = "https://github.com/ericwangbtc/ircc-tracker"
+Issues = "https://github.com/ericwangbtc/ircc-tracker/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
