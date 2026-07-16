@@ -11,6 +11,7 @@ requires-python = ">=3.11"
 license = "MIT"
 license-files = ["LICENSE"]
 dependencies = [
+  "certifi>=2024.2.2",
   "requests>=2.33,<3",
   "truststore>=0.10,<1",
   "urllib3>=2.7,<3",
@@ -25,3 +26,6 @@ Issues = "https://github.com/ericwangbtc/ircc-tracker/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+ircc_tracker = ["certs/*.pem"]
