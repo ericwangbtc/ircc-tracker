@@ -2,16 +2,49 @@
 
 from __future__ import annotations
 
+import ssl
 from dataclasses import dataclass
+from importlib import resources
 from typing import Any, Optional
 
+import certifi
 import truststore
 
-# Use the operating system trust store. This also handles certificate-chain
-# completion on services whose server-provided chain is incomplete.
-truststore.inject_into_ssl()
-
 import requests
+from requests.adapters import HTTPAdapter
+
+# The IRCC tracker API serves an incomplete certificate chain: it omits the
+# intermediate CA ("Entrust OV TLS Issuing RSA CA 2") that signs its leaf
+# certificate. Browsers recover by fetching the missing intermediate via the
+# certificate's AIA extension, but Python's TLS stack does not. We fix this
+# deterministically by trusting three sources at once, without disabling
+# verification:
+#   1. the operating system trust store (truststore) — honours corporate roots;
+#   2. certifi's public root bundle;
+#   3. the bundled intermediate shipped inside this package.
+# (3) guarantees the chain completes on any platform, even offline, so we no
+# longer depend on the OS being able to fetch the missing intermediate itself.
+_BUNDLED_INTERMEDIATES = resources.files("ircc_tracker").joinpath(
+    "certs/ircc_api_intermediates.pem"
+)
+
+
+class _ChainCompletingAdapter(HTTPAdapter):
+    """HTTPS adapter that trusts the OS store, certifi, and bundled CAs."""
+
+    def init_poolmanager(self, *args: Any, **kwargs: Any) -> Any:
+        context = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        context.load_verify_locations(cafile=certifi.where())
+        with resources.as_file(_BUNDLED_INTERMEDIATES) as intermediates:
+            context.load_verify_locations(cafile=str(intermediates))
+        kwargs["ssl_context"] = context
+        return super().init_poolmanager(*args, **kwargs)
+
+
+def _build_session() -> requests.Session:
+    session = requests.Session()
+    session.mount("https://", _ChainCompletingAdapter())
+    return session
 
 
 COGNITO_URL = "https://cognito-idp.ca-central-1.amazonaws.com/"
@@ -51,7 +84,7 @@ class IrccClient:
         session: Optional[requests.Session] = None,
     ) -> None:
         self.timeout = timeout
-        self.session = session or requests.Session()
+        self.session = session or _build_session()
         self.tokens: Optional[Tokens] = None
 
     def authenticate(self, uci: str, password: str) -> Tokens:
