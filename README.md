@@ -48,13 +48,56 @@ python -m pip install .
 
 ## 使用
 
-启动后依次输入 UCI、Tracker 密码，并从账户中的申请列表选择要查询的申请：
+每次打开新的终端后，先进入项目目录并激活安装时创建的虚拟环境。
+
+macOS 或 Linux：
 
 ```bash
+cd ircc-tracker
+source .venv/bin/activate
 ircc-tracker
 ```
 
-查询结果以 JSON 显示在终端中。输出可能包含姓名、UCI、申请号和移民申请状态等隐私信息，请勿复制到公开位置。
+Windows PowerShell：
+
+```powershell
+cd ircc-tracker
+.venv\Scripts\Activate.ps1
+ircc-tracker
+```
+
+如果终端提示 `command not found: ircc-tracker`，通常是因为虚拟环境尚未激活，或者安装步骤尚未完成。
+
+程序会依次完成以下步骤：
+
+1. 在 `UCI:` 后输入自己的 UCI。可以输入纯数字，也可以保留连字符，例如 `12-3456-7890`；程序发送请求前会自动移除连字符。
+2. 在 `Tracker password:` 后输入 IRCC Application Status Tracker 的密码。输入密码时终端不会显示字符或星号，这是正常的安全行为；输入完成后按 Enter。
+3. 程序显示 `Connecting to IRCC…`，完成登录后列出当前账户下的申请。
+4. 在 `Select application number:` 后输入申请左侧的**列表序号**，例如输入 `1`，而不是输入 `E123456789` 形式的申请号。
+5. 程序获取所选申请的详情，并以格式化 JSON 输出到终端。
+
+交互示例中的 UCI、申请号和日期均为虚构数据：
+
+```bash
+ircc-tracker
+UCI: 12-3456-7890
+Tracker password:
+Connecting to IRCC…
+
+Applications:
+  1. E123456789  PR  inProgress  2026-01-15T12:00:00.000Z
+Select application number: 1
+{
+  "applicationNumber": "E123456789",
+  "details": {
+    "...": "IRCC 返回的申请详情"
+  }
+}
+```
+
+可以按 Ctrl+C 取消查询。程序退出后，密码和登录令牌会随进程结束而消失。
+
+JSON 输出是 IRCC 后台返回的原始申请数据，字段可能随 IRCC 调整而变化。输出可能包含姓名、出生日期、住址、电话、电子邮箱、UCI、申请号和申请状态等敏感信息。分享终端截图、错误报告或日志前，请先完整遮盖这些内容，不要将原始输出发布到 GitHub Issue 或其他公开位置。
 
 ## 安全说明
 
