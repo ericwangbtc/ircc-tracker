@@ -220,9 +220,12 @@ class IrccClient:
 
         message = _error_message(body)
         if authentication_request and response.status_code in {400, 401, 403}:
-            if "incorrect username or password" in message.lower():
-                message = "Incorrect UCI or Tracker password."
-            raise AuthenticationError(message)
+            error_code = _cognito_error_code(body) or _cognito_error_code(
+                {"code": response.headers.get("x-amzn-errortype", "")}
+            )
+            raise AuthenticationError(
+                _authentication_error_message(body, error_code=error_code)
+            )
 
         if response.status_code == 401:
             raise AuthenticationError(
@@ -271,10 +274,88 @@ def application_number(app: dict[str, Any]) -> str:
 
 def _error_message(body: Any) -> str:
     if isinstance(body, dict):
-        for key in ("message", "error", "error_description", "__type"):
+        for key in ("message", "error_description", "error"):
             if body.get(key):
                 return str(body[key])
     return "Unknown error"
+
+
+def _authentication_error_message(
+    body: Any,
+    *,
+    error_code: str = "",
+) -> str:
+    """Turn Cognito failures into actionable messages without exposing secrets."""
+
+    code = error_code or _cognito_error_code(body)
+    message = _error_message(body)
+    message_lower = message.lower()
+    code_label = f" ({code})" if code else ""
+
+    if "unable to login because of security reasons" in message_lower:
+        return (
+            "Sign-in was blocked by IRCC/Cognito security controls"
+            f"{code_label}. This does not necessarily mean the password is wrong "
+            "or the account is permanently locked. Stop retrying and try the "
+            "official tracker later."
+        )
+
+    if code == "PasswordResetRequiredException":
+        return (
+            "IRCC/Cognito requires a password reset"
+            f"{code_label}. Reset the Tracker password through the official site."
+        )
+
+    if code == "UserNotConfirmedException":
+        return (
+            "The Tracker account has not been confirmed"
+            f"{code_label}. Complete account verification on the official site."
+        )
+
+    if code in {
+        "LimitExceededException",
+        "TooManyFailedAttemptsException",
+        "TooManyRequestsException",
+    }:
+        return (
+            "IRCC/Cognito rejected the login because too many attempts were made"
+            f"{code_label}. Stop retrying and wait at least 15 minutes before "
+            "using the official tracker."
+        )
+
+    if "password attempts exceeded" in message_lower:
+        return (
+            "Too many failed password attempts"
+            f"{code_label}. Stop retrying and wait at least 15 minutes before "
+            "using the official tracker."
+        )
+
+    # Do not reveal whether a particular UCI exists in Cognito.
+    if code == "UserNotFoundException":
+        return "Incorrect UCI or Tracker password."
+
+    if "incorrect username or password" in message_lower:
+        return f"Incorrect UCI or Tracker password{code_label}."
+
+    if code:
+        return f"Cognito authentication failed ({code}): {message}"
+    return f"IRCC authentication failed: {message}"
+
+
+def _cognito_error_code(body: Any) -> str:
+    if not isinstance(body, dict):
+        return ""
+
+    for key in ("__type", "code", "Code"):
+        value = body.get(key)
+        if not isinstance(value, str) or not value:
+            continue
+        # Cognito can return either "NotAuthorizedException" or a namespaced
+        # form such as "com.amazon.cognito#NotAuthorizedException".
+        normalized = value.rsplit("#", 1)[-1].split(":", 1)[0]
+        if normalized.replace("_", "").isalnum():
+            return normalized[:80]
+    return ""
 
 
 def _optional_str(value: Any) -> Optional[str]:

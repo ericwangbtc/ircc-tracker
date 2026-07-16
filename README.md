@@ -97,6 +97,10 @@ Select application number: 1
 
 JSON 输出是 IRCC 后台返回的原始申请数据，字段可能随 IRCC 调整而变化。输出可能包含姓名、出生日期、住址、电话、电子邮箱、UCI、申请号和申请状态等敏感信息。分享终端截图、错误报告或日志前，请先完整遮盖这些内容，不要将原始输出发布到 GitHub Issue 或其他公开位置。
 
+### 登录错误
+
+程序会显示 Cognito 返回的安全错误类型，并给出对应操作建议，例如登录风控、尝试次数超限、必须重置密码或账户尚未确认。错误信息不会包含输入的密码或登录令牌。遇到安全阻止或次数限制时，请停止重复尝试，并改用官方 Tracker 验证账户状态。
+
 ## 安全说明
 
 - 不支持通过命令行参数传入密码，避免密码进入 shell history。
@@ -209,6 +213,10 @@ Select application number: 1
 Press Ctrl+C to cancel a query. Your password and authentication tokens disappear with the process after the program exits.
 
 The JSON output contains raw application data returned by the IRCC backend, and its fields may change when IRCC updates the service. It may contain sensitive information such as your name, date of birth, address, phone number, email address, UCI, application number, and application status. Fully redact this information before sharing terminal screenshots, bug reports, or logs. Never post the raw output in a GitHub Issue or anywhere else public.
+
+### Login errors
+
+The program displays the safe Cognito error type with guidance for security blocks, excessive attempts, required password resets, and unconfirmed accounts. Error messages never include the password or authentication tokens. If a login is blocked for security reasons or excessive attempts, stop retrying and verify the account through the official Tracker.
 
 ## Security
 
