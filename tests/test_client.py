@@ -1,8 +1,13 @@
 import unittest
+from importlib import resources
 
 from ircc_tracker.client import (
+    COGNITO_URL,
+    IRCC_API_ORIGIN,
     AuthenticationError,
     IrccClient,
+    _ChainCompletingAdapter,
+    _build_session,
     application_number,
     extract_applications,
     normalize_uci,
@@ -30,6 +35,26 @@ class FakeSession:
 
 
 class ClientTests(unittest.TestCase):
+    def test_custom_tls_adapter_is_scoped_to_ircc_api(self):
+        session = _build_session()
+
+        self.assertIsInstance(
+            session.get_adapter(IRCC_API_ORIGIN),
+            _ChainCompletingAdapter,
+        )
+        self.assertNotIsInstance(
+            session.get_adapter(COGNITO_URL),
+            _ChainCompletingAdapter,
+        )
+
+    def test_bundled_intermediate_is_installed_as_package_data(self):
+        certificate = resources.files("ircc_tracker").joinpath(
+            "certs/ircc_api_intermediates.pem"
+        )
+
+        self.assertTrue(certificate.is_file())
+        self.assertIn("BEGIN CERTIFICATE", certificate.read_text())
+
     def test_authenticate_and_query_details(self):
         session = FakeSession([
             FakeResponse(200, {

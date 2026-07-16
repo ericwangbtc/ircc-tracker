@@ -13,6 +13,11 @@ import truststore
 import requests
 from requests.adapters import HTTPAdapter
 
+COGNITO_URL = "https://cognito-idp.ca-central-1.amazonaws.com/"
+COGNITO_CLIENT_ID = "3cfutv5ffd1i622g1tn6vton5r"
+IRCC_API_ORIGIN = "https://api.ircc-tracker-suivi.apps.cic.gc.ca/"
+IRCC_API_URL = f"{IRCC_API_ORIGIN}user"
+
 # The IRCC tracker API serves an incomplete certificate chain: it omits the
 # intermediate CA ("Entrust OV TLS Issuing RSA CA 2") that signs its leaf
 # certificate. Browsers recover by fetching the missing intermediate via the
@@ -43,13 +48,11 @@ class _ChainCompletingAdapter(HTTPAdapter):
 
 def _build_session() -> requests.Session:
     session = requests.Session()
-    session.mount("https://", _ChainCompletingAdapter())
+    # Keep the extra intermediate scoped to the one server that needs it.
+    # Cognito and every other HTTPS destination retain Requests' default TLS
+    # configuration and cannot be affected by this compatibility workaround.
+    session.mount(IRCC_API_ORIGIN, _ChainCompletingAdapter())
     return session
-
-
-COGNITO_URL = "https://cognito-idp.ca-central-1.amazonaws.com/"
-COGNITO_CLIENT_ID = "3cfutv5ffd1i622g1tn6vton5r"
-IRCC_API_URL = "https://api.ircc-tracker-suivi.apps.cic.gc.ca/user"
 
 
 class IrccError(RuntimeError):
