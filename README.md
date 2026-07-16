@@ -48,12 +48,11 @@ python -m pip install .
 
 ## 使用
 
-每次打开新的终端后，先进入项目目录并激活安装时创建的虚拟环境。
+每次打开新的终端后，记得激活安装时创建的虚拟环境。
 
 macOS 或 Linux：
 
 ```bash
-cd ircc-tracker
 source .venv/bin/activate
 ircc-tracker
 ```
@@ -61,7 +60,6 @@ ircc-tracker
 Windows PowerShell：
 
 ```powershell
-cd ircc-tracker
 .venv\Scripts\Activate.ps1
 ircc-tracker
 ```
@@ -104,35 +102,8 @@ JSON 输出是 IRCC 后台返回的原始申请数据，字段可能随 IRCC 调
 - 不支持通过命令行参数传入密码，避免密码进入 shell history。
 - 不保存密码或令牌。
 - UCI、密码和申请选择均通过交互方式输入。
-- HTTPS 证书验证始终保持开启；仅对证书链异常的 IRCC API 使用操作系统证书库、certifi 根证书以及随包内置的中间证书（详见下方“TLS 证书”）。
 - 请求超时默认为 30 秒。
 - 建议手动、低频查询，不要高频轮询。
-
-## TLS 证书
-
-IRCC 的 API 服务器返回的证书链**不完整**——它缺少签发其叶子证书的中间证书
-`Entrust OV TLS Issuing RSA CA 2`。浏览器会通过证书的 AIA 扩展自动补下载这张中间
-证书，但 Python 的 TLS 栈不会，因此直连时会报
-`unable to get local issuer certificate`（证书验证失败）。
-
-本工具在**不关闭证书验证**的前提下解决此问题：验证时同时信任三处来源——
-
-1. 操作系统证书信任库（兼容公司内部根证书 / 代理）；
-2. `certifi` 提供的公共根证书；
-3. 随包内置的中间证书 `src/ircc_tracker/certs/ircc_api_intermediates.pem`。
-
-第 3 项保证证书链在任何平台、即使离线也能补齐，无需依赖操作系统联网去补下载。
-该额外信任配置仅应用于 IRCC API 域名，不影响 Cognito 或其他 HTTPS 连接。内置证书是公开的 CA 证书，不含任何隐私信息。
-
-如果 IRCC 日后修复了服务器端的证书链配置，此内置证书将变为冗余，可安全移除。
-
-## 测试
-
-测试不会连接 IRCC，也不需要真实账户：
-
-```bash
-python -m unittest discover -s tests -v
-```
 
 ## License
 
