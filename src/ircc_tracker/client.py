@@ -5,6 +5,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Optional
 
+import truststore
+
+# Use the operating system trust store. This also handles certificate-chain
+# completion on services whose server-provided chain is incomplete.
+truststore.inject_into_ssl()
+
 import requests
 
 
@@ -154,6 +160,11 @@ class IrccClient:
                 json=json,
                 timeout=self.timeout,
             )
+        except requests.exceptions.SSLError as exc:
+            raise ApiError(
+                f"IRCC {operation} TLS certificate verification failed. "
+                "Update this application and your operating system certificates."
+            ) from exc
         except requests.Timeout as exc:
             raise ApiError(f"IRCC {operation} timed out.") from exc
         except requests.RequestException as exc:

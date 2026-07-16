@@ -7,7 +7,7 @@
 - IRCC 使用的 AWS Cognito 登录服务；
 - IRCC Application Status Tracker API。
 
-密码、ID Token 和 Refresh Token 只存在于当前 Python 进程的内存中，不会写入磁盘。工具不会关闭 TLS 验证，也不会将数据发送到第三方服务器。
+密码、ID Token 和 Refresh Token 只存在于当前 Python 进程的内存中，不会写入磁盘。工具使用操作系统的证书信任库验证 TLS，不会关闭证书验证，也不会将数据发送到第三方服务器。
 
 > 这是非官方工具。IRCC 的内部 API 没有公开文档，可能随时变化。请仅用于查询自己的账户；遇到 403、WAF 或限流时不要尝试绕过。
 
@@ -61,7 +61,7 @@ ircc-tracker
 - 不支持通过命令行参数传入密码，避免密码进入 shell history。
 - 不保存密码或令牌。
 - UCI、密码和申请选择均通过交互方式输入。
-- HTTPS 证书验证保持开启。
+- HTTPS 证书验证保持开启，并使用操作系统的证书信任库。
 - 请求超时默认为 30 秒。
 - 建议手动、低频查询，不要高频轮询。
 
